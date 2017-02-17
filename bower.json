@@ -1,0 +1,8 @@
+{
+  "name": "simple-db",
+  "description": "A simple indexedDB implementation",
+  "author": "toddradigan",
+  "private": true,
+  "dependencies": {
+  }
+}
