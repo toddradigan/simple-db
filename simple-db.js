@@ -2,17 +2,23 @@
 
 class SimpleDB {
 
-  constructor(dbName) {
-    if (!window.indexedDB) {
-      throw new Error('browser does not support IndexedDB');
-    }
+  constructor(dbName, workerUrl) {
+    this._dbName = dbName;
 
-    if (!dbName || typeof dbName !== 'string' || dbName.length <= 0) {
-      throw new Error('invalid database names');
-    }
+    if (workerUrl && typeof SDBWorkerClient === 'function') {
+      this._worker = new SDBWorkerClient(workerUrl, this._dbName);
+    } else {
+      if (!window.indexedDB) {
+        throw new Error('browser does not support IndexedDB');
+      }
 
-    this.dbName = '__sdb_' + dbName;
-    this._idb = window.indexedDB;
+      if (!dbName || typeof dbName !== 'string' || dbName.length <= 0) {
+        throw new Error('invalid database names');
+      }
+
+      this.dbName = '__sdb_' + this._dbName;
+      this._idb = window.indexedDB;
+    }
 
     this.init();
   }
@@ -27,6 +33,14 @@ class SimpleDB {
 
   destroy(key) {
     var ctx = this;
+
+    if (ctx._worker) {
+      return ctx.init()
+        .then(function() {
+          return ctx._worker.query({operation: 'destroy', key: key});
+        });
+    }
+
     return ctx.db
       .then(function(db) {
         return new Promise(function(resolve, reject) {
@@ -41,8 +55,49 @@ class SimpleDB {
       });
   }
 
+  find() {
+    var ctx = this;
+
+    if (ctx._worker) {
+      return ctx.init()
+        .then(function() {
+          return ctx._worker.query({operation: 'find'});
+        });
+    }
+
+    return ctx.db
+      .then(function(db) {
+        return new Promise(function(resolve, reject) {
+          var read = db.transaction(ctx._data).objectStore(ctx._data).openCursor();
+          var results = [];
+          read.onerror = function(e) {
+            reject(e);
+          };
+          read.onsuccess = function(e) {
+            var cursor = e.target.result;
+            if (cursor) {
+              if (cursor.value && cursor.value.data) {
+                results.push(cursor.value.data);
+              }
+              cursor.continue();
+            } else {
+              resolve(results);
+            }
+          };
+        });
+      });
+  }
+
   get(key) {
     var ctx = this;
+
+    if (ctx._worker) {
+      return ctx.init()
+        .then(function() {
+          return ctx._worker.query({operation: 'get', key: key});
+        });
+    }
+
     return ctx.db
       .then(function(db) {
         return new Promise(function(resolve, reject) {
@@ -51,13 +106,17 @@ class SimpleDB {
             reject(e);
           };
           read.onsuccess = function(e) {
-            resolve(read.result);
+            resolve(read.result.data);
           };
         });
       });
   }
 
   init() {
+    if (this._worker) {
+      return this._worker.query({operation: 'init', dbName: this._dbName});
+    }
+
     if (this._db) {
       return Promise.resolve(this._db);
     }
@@ -86,8 +145,21 @@ class SimpleDB {
     });
   }
 
-  save(obj) {
+  save(key, data) {
     var ctx = this;
+
+    if (ctx._worker) {
+      return ctx.init()
+        .then(function() {
+          return ctx._worker.query({operation: 'save', key: key, data: data});
+        });
+    }
+
+    var obj = {
+      _id: key,
+      data: data
+    };
+
     return ctx.db
       .then(function(db) {
         return new Promise(function(resolve, reject) {
@@ -96,7 +168,7 @@ class SimpleDB {
             reject(e);
           };
           write.onsuccess = function(e) {
-            resolve(obj);
+            resolve(data);
           };
         });
       });
