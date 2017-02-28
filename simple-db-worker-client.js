@@ -28,7 +28,7 @@ class SDBWorkerClient {
             reject(e.data.error);
           }
 
-          if (e.data.result) {
+          if (e.data.result || e.data.done) {
             ctx.worker.removeEventListener('message', onMessage);
             resolve(e.data.result);
           } else if (e.data.partial) {

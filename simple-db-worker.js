@@ -57,6 +57,7 @@ var ops = {
           postMessage(data);
         };
         write.onsuccess = function(e) {
+          data.done = true;
           data.result = true;
           postMessage(data);
         };
@@ -87,6 +88,7 @@ var ops = {
             }
             cursor.continue();
           } else {
+            data.done = true;
             data.result = results;
             postMessage(data);
           }
@@ -114,7 +116,8 @@ var ops = {
           postMessage(data);
         };
         read.onsuccess = function(e) {
-          data.result = read.result.data;
+          data.done = true;
+          data.result = read.result && read.result.data;
           postMessage(data);
         };
       })
@@ -133,6 +136,7 @@ var ops = {
 
     self._init(data.dbName)
       .then(function(db) {
+        data.done = true;
         data.result = true;
         postMessage(data);
       })
@@ -157,6 +161,7 @@ var ops = {
           postMessage(data);
         };
         write.onsuccess = function(e) {
+          data.done = true;
           data.result = obj.data;
           postMessage(data);
         };
