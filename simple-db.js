@@ -8,7 +8,7 @@ class SimpleDB {
     if (workerUrl && typeof SDBWorkerClient === 'function') {
       this._worker = new SDBWorkerClient(workerUrl, this._dbName);
     } else {
-      if (!window.indexedDB) {
+      if (!indexedDB) {
         throw new Error('browser does not support IndexedDB');
       }
 
@@ -17,7 +17,7 @@ class SimpleDB {
       }
 
       this.dbName = '__sdb_' + this._dbName;
-      this._idb = window.indexedDB;
+      this._idb = indexedDB;
     }
 
     this.init();
