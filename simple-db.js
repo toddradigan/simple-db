@@ -13,7 +13,7 @@ class SimpleDB {
       }
 
       if (!dbName || typeof dbName !== 'string' || dbName.length <= 0) {
-        throw new Error('invalid database names');
+        throw new Error('invalid database name');
       }
 
       this.dbName = '__sdb_' + this._dbName;
@@ -32,19 +32,16 @@ class SimpleDB {
   }
 
   destroy(key) {
-    var ctx = this;
+    const ctx = this;
 
     if (ctx._worker) {
-      return ctx.init()
-        .then(function() {
-          return ctx._worker.query({operation: 'destroy', key: key});
-        });
+      return ctx._worker.query({operation: 'destroy', key: key});
     }
 
     return ctx.db
       .then(function(db) {
         return new Promise(function(resolve, reject) {
-          var write = db.transaction(ctx._data, 'readwrite').objectStore(ctx._data).delete(key);
+          const write = db.transaction(ctx._data, 'readwrite').objectStore(ctx._data).delete(key);
           write.onerror = function(e) {
             reject(e);
           };
@@ -56,25 +53,22 @@ class SimpleDB {
   }
 
   find() {
-    var ctx = this;
+    const ctx = this;
 
     if (ctx._worker) {
-      return ctx.init()
-        .then(function() {
-          return ctx._worker.query({operation: 'find'});
-        });
+      return ctx._worker.query({operation: 'find'});
     }
 
     return ctx.db
       .then(function(db) {
         return new Promise(function(resolve, reject) {
-          var read = db.transaction(ctx._data).objectStore(ctx._data).openCursor();
-          var results = [];
+          const read = db.transaction(ctx._data).objectStore(ctx._data).openCursor();
+          const results = [];
           read.onerror = function(e) {
             reject(e);
           };
           read.onsuccess = function(e) {
-            var cursor = e.target.result;
+            const cursor = e.target.result;
             if (cursor) {
               if (cursor.value && cursor.value.data) {
                 results.push(cursor.value.data);
@@ -89,19 +83,16 @@ class SimpleDB {
   }
 
   get(key) {
-    var ctx = this;
+    const ctx = this;
 
     if (ctx._worker) {
-      return ctx.init()
-        .then(function() {
-          return ctx._worker.query({operation: 'get', key: key});
-        });
+      return ctx._worker.query({operation: 'get', key: key});
     }
 
     return ctx.db
       .then(function(db) {
         return new Promise(function(resolve, reject) {
-          var read = db.transaction(ctx._data).objectStore(ctx._data).get(key);
+          const read = db.transaction(ctx._data).objectStore(ctx._data).get(key);
           read.onerror = function(e) {
             reject(e);
           };
@@ -114,7 +105,7 @@ class SimpleDB {
 
   init() {
     if (this._worker) {
-      return this._worker.query({operation: 'init', dbName: this._dbName});
+      return Promise.resolve(this._worker);
     }
 
     if (this._db) {
@@ -146,16 +137,13 @@ class SimpleDB {
   }
 
   save(key, data) {
-    var ctx = this;
+    const ctx = this;
 
     if (ctx._worker) {
-      return ctx.init()
-        .then(function() {
-          return ctx._worker.query({operation: 'save', key: key, data: data});
-        });
+      return ctx._worker.query({operation: 'save', key: key, data: data});
     }
 
-    var obj = {
+    const obj = {
       _id: key,
       data: data
     };
@@ -163,7 +151,7 @@ class SimpleDB {
     return ctx.db
       .then(function(db) {
         return new Promise(function(resolve, reject) {
-          var write = db.transaction(ctx._data, 'readwrite').objectStore(ctx._data).put(obj);
+          const write = db.transaction(ctx._data, 'readwrite').objectStore(ctx._data).put(obj);
           write.onerror = function(e) {
             reject(e);
           };

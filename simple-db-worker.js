@@ -4,7 +4,7 @@ self._data = '_data';
 
 _init = function(dbName) {
   if (self.db) {
-    return Promise.resolve(self.db);
+    return self.db;
   }
 
   if (!indexedDB) {
@@ -18,29 +18,29 @@ _init = function(dbName) {
   const ctx = self;
   ctx.dbName = '__sdb_' + dbName;
 
-  return new Promise(function(resolve, reject) {
-    let open = indexedDB.open(ctx.dbName);
+  self.db = new Promise(function(resolve, reject) {
+    const open = indexedDB.open(ctx.dbName);
     open.onerror = function(e) {
-      ctx.db = null;
       reject('could not open database');
     };
     open.onsuccess = function(e) {
-      ctx.db = open.result;
-      resolve(ctx.db);
+      resolve(open.result);
     };
     open.onupgradeneeded = function(e) {
-      ctx.db = open.result;
+      const db = open.result;
 
-      if (!ctx.db.objectStoreNames.contains(ctx._data)) {
-        ctx.db.createObjectStore(ctx._data, { keyPath: '_id' });
+      if (!db.objectStoreNames.contains(ctx._data)) {
+        db.createObjectStore(ctx._data, { keyPath: '_id' });
       }
 
-      resolve(ctx.db);
+      resolve(db);
     };
   });
+
+  return self.db;
 }
 
-var ops = {
+const ops = {
   destroy: function(data) {
     if (!data.key) {
       data.error = 'key required';
@@ -48,10 +48,10 @@ var ops = {
       return;
     }
 
-    var ctx = self;
+    const ctx = self;
     return ctx._init()
       .then(function(db) {
-        var write = db.transaction(ctx._data, 'readwrite').objectStore(ctx._data).delete(data.key);
+        const write = db.transaction(ctx._data, 'readwrite').objectStore(ctx._data).delete(data.key);
         write.onerror = function(error) {
           data.error = e;
           postMessage(data);
@@ -69,22 +69,21 @@ var ops = {
   },
 
   find: function(data) {
-    var ctx = self;
+    const ctx = self;
     return ctx._init()
       .then(function(db) {
-        var read = db.transaction(ctx._data).objectStore(ctx._data).openCursor();
-        var results = [];
+        const read = db.transaction(ctx._data).objectStore(ctx._data).openCursor();
+        const results = [];
         read.onerror = function(error) {
           data.error = error;
           postMessage(data);
         };
         read.onsuccess = function(e) {
-          var cursor = e.target.result;
+          const cursor = e.target.result;
           if (cursor) {
             if (cursor.value && cursor.value.data) {
               results.push(cursor.value.data);
-              var d = Object.assign({}, data, {partial: cursor.value.data});
-              postMessage(d);
+              postMessage(Object.assign({}, data, {partial: cursor.value.data}));
             }
             cursor.continue();
           } else {
@@ -107,10 +106,10 @@ var ops = {
       return;
     }
 
-    var ctx = self;
+    const ctx = self;
     return ctx._init()
       .then(function(db) {
-        var read = db.transaction(ctx._data).objectStore(ctx._data).get(data.key);
+        const read = db.transaction(ctx._data).objectStore(ctx._data).get(data.key);
         read.onerror = function(error) {
           data.error = error;
           postMessage(data);
@@ -147,15 +146,15 @@ var ops = {
   },
 
   save: function(data) {
-    var ctx = self;
-    var obj = {
+    const ctx = self;
+    const obj = {
       _id: data.key,
       data: data.data
     };
 
     return ctx._init()
       .then(function(db) {
-        var write = db.transaction(ctx._data, 'readwrite').objectStore(ctx._data).put(obj);
+        const write = db.transaction(ctx._data, 'readwrite').objectStore(ctx._data).put(obj);
         write.onerror = function(e) {
           data.error = e;
           postMessage(data);

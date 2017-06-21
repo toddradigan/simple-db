@@ -3,6 +3,7 @@
 class SDBWorkerClient {
   constructor(url, dbName, onError) {
     this.requestId = 0;
+    this.requests = new Map();
     this.worker = new Worker(url);
 
     if (onError) {
@@ -12,34 +13,35 @@ class SDBWorkerClient {
     if (dbName) {
       this.query({operation: 'init', dbName: dbName});
     }
+
+    this.worker.onmessage = function(e) {
+      const deferred = this.requests.get(e.data && e.data._id);
+      if (deferred) {
+        if (e.data.error) {
+          this.requests.delete(e.data._id);
+          deferred.reject(e.data.error);
+        }
+
+        if (e.data.result || e.data.done) {
+          this.requests.delete(e.data._id);
+          deferred.resolve(e.data.result);
+        } else if (e.data.partial) {
+          //fire result event
+          // console.log('partial result', e.data.partial);
+        }
+      }
+    }.bind(this);
   }
 
   query(data) {
-    var id = this.requestId++;
+    const id = this.requestId++;
     data._id = id;
 
-    var ctx = this;
+    const deferred = new Deferred();
+    this.requests.set(id, deferred);
 
-    return new Promise(function(resolve, reject) {
-      ctx.worker.addEventListener('message', function onMessage(e) {
-        if (e.data && e.data._id === id) {
-          if (e.data.error) {
-            ctx.worker.removeEventListener('message', onMessage);
-            reject(e.data.error);
-          }
-
-          if (e.data.result || e.data.done) {
-            ctx.worker.removeEventListener('message', onMessage);
-            resolve(e.data.result);
-          } else if (e.data.partial) {
-            //fire result event
-            // console.log('partial result', e.data.partial);
-          }
-        }
-      });
-
-      ctx.worker.postMessage(data);
-    });
+    this.worker.postMessage(data);
+    return deferred.promise;
   }
 
   terminate() {
