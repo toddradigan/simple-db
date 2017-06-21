@@ -33,6 +33,18 @@ class SDBWorkerClient {
     }.bind(this);
   }
 
+  destroy(key) {
+    return this.query({operation: 'destroy', key: key});
+  }
+
+  find() {
+    return this.query({operation: 'find'});
+  }
+
+  get(key) {
+    return this.query({operation: 'get', key: key});
+  }
+
   query(data) {
     const id = this.requestId++;
     data._id = id;
@@ -42,6 +54,10 @@ class SDBWorkerClient {
 
     this.worker.postMessage(data);
     return deferred.promise;
+  }
+
+  save(key, data) {
+    return this.query({operation: 'save', key: key, data: data});
   }
 
   terminate() {
