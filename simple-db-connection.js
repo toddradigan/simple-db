@@ -1,6 +1,6 @@
 'use strict';
 
-class SimpleDBDirect {
+class SimpleDBConnection {
 
   constructor(dbName) {
     this._dbName = dbName;

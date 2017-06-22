@@ -1,43 +1,17 @@
+self.importScripts('simple-db-connection.js');
+
 self.db;
-self.dbName;
-self._data = '_data';
 
 _init = function(dbName) {
-  if (self.db) {
-    return self.db;
-  }
+  console.log('INIT', typeof SimpleDBConnection);
+  return new Promise((resolve, reject) => {
+    if (self.db) {
+      resolve(self.db);
+    }
 
-  if (!indexedDB) {
-    throw new Error('browser does not support IndexedDB');
-  }
-
-  if (!dbName || typeof dbName !== 'string' || dbName.length <= 0) {
-    throw new Error('invalid database names');
-  }
-
-  const ctx = self;
-  ctx.dbName = '__sdb_' + dbName;
-
-  self.db = new Promise(function(resolve, reject) {
-    const open = indexedDB.open(ctx.dbName);
-    open.onerror = function(e) {
-      reject('could not open database');
-    };
-    open.onsuccess = function(e) {
-      resolve(open.result);
-    };
-    open.onupgradeneeded = function(e) {
-      const db = open.result;
-
-      if (!db.objectStoreNames.contains(ctx._data)) {
-        db.createObjectStore(ctx._data, { keyPath: '_id' });
-      }
-
-      resolve(db);
-    };
+    self.db = new SimpleDBConnection(dbName);
+    resolve(self.db);
   });
-
-  return self.db;
 }
 
 const ops = {
@@ -48,53 +22,27 @@ const ops = {
       return;
     }
 
-    const ctx = self;
-    return ctx._init()
-      .then(function(db) {
-        const write = db.transaction(ctx._data, 'readwrite').objectStore(ctx._data).delete(data.key);
-        write.onerror = function(error) {
-          data.error = e;
-          postMessage(data);
-        };
-        write.onsuccess = function(e) {
-          data.done = true;
-          data.result = true;
-          postMessage(data);
-        };
+    return self.db.destroy(data.key)
+      .then(() => {
+        data.done = true;
+        data.result = true;
+        postMessage(data);
       })
-      .catch(function(error) {
-        data.error = error;
+      .catch((err) => {
+        data.error = err.message;
         postMessage(data);
       });
   },
 
   find: function(data) {
-    const ctx = self;
-    return ctx._init()
-      .then(function(db) {
-        const read = db.transaction(ctx._data).objectStore(ctx._data).openCursor();
-        const results = [];
-        read.onerror = function(error) {
-          data.error = error;
-          postMessage(data);
-        };
-        read.onsuccess = function(e) {
-          const cursor = e.target.result;
-          if (cursor) {
-            if (cursor.value && cursor.value.data) {
-              results.push(cursor.value.data);
-              postMessage(Object.assign({}, data, {partial: cursor.value.data}));
-            }
-            cursor.continue();
-          } else {
-            data.done = true;
-            data.result = results;
-            postMessage(data);
-          }
-        };
+    return self.db.find()
+      .then((results) => {
+        data.done = true;
+        data.result = results;
+        postMessage(data);
       })
-      .catch(function(error) {
-        data.error = error;
+      .catch((err) => {
+        data.error = err.message;
         postMessage(data);
       });
   },
@@ -106,22 +54,14 @@ const ops = {
       return;
     }
 
-    const ctx = self;
-    return ctx._init()
-      .then(function(db) {
-        const read = db.transaction(ctx._data).objectStore(ctx._data).get(data.key);
-        read.onerror = function(error) {
-          data.error = error;
-          postMessage(data);
-        };
-        read.onsuccess = function(e) {
-          data.done = true;
-          data.result = read.result && read.result.data;
-          postMessage(data);
-        };
+    return self.db.get(data.key)
+      .then((result) => {
+        data.done = true;
+        data.result = result;
+        postMessage(data);
       })
-      .catch(function(error) {
-        data.error = error;
+      .catch((err) => {
+        data.error = err.message;
         postMessage(data);
       });
   },
@@ -134,39 +74,26 @@ const ops = {
     }
 
     self._init(data.dbName)
-      .then(function(db) {
+      .then((db) => {
         data.done = true;
         data.result = true;
         postMessage(data);
       })
-      .catch(function(error) {
-        data.error = error;
+      .catch((err) => {
+        data.error = err.message;
         postMessage(data);
       });
   },
 
   save: function(data) {
-    const ctx = self;
-    const obj = {
-      _id: data.key,
-      data: data.data
-    };
-
-    return ctx._init()
-      .then(function(db) {
-        const write = db.transaction(ctx._data, 'readwrite').objectStore(ctx._data).put(obj);
-        write.onerror = function(e) {
-          data.error = e;
-          postMessage(data);
-        };
-        write.onsuccess = function(e) {
-          data.done = true;
-          data.result = obj.data;
-          postMessage(data);
-        };
+    return self.db.save(data.key, data.data)
+      .then((result) => {
+        data.done = true;
+        data.result = result;
+        postMessage(data);
       })
-      .catch(function(error) {
-        data.error = error;
+      .catch((err) => {
+        data.error = err.message;
         postMessage(data);
       });
   }

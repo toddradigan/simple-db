@@ -7,8 +7,8 @@ class SimpleDB {
 
     if (workerUrl && typeof SDBWorkerClient === 'function') {
       this._db = new SDBWorkerClient(workerUrl, this._dbName);
-    } else if (typeof SimpleDBDirect === 'function') {
-      this._db = new SimpleDBDirect(this._dbName);
+    } else if (typeof SimpleDBConnection === 'function') {
+      this._db = new SimpleDBConnection(this._dbName);
     }
   }
 
