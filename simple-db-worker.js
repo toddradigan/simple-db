@@ -3,7 +3,6 @@ self.importScripts('simple-db-connection.js');
 self.db;
 
 _init = function(dbName) {
-  console.log('INIT', typeof SimpleDBConnection);
   return new Promise((resolve, reject) => {
     if (self.db) {
       resolve(self.db);

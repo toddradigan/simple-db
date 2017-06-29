@@ -80,7 +80,7 @@ class SimpleDBConnection {
             reject(e);
           };
           read.onsuccess = function(e) {
-            resolve(read.result.data);
+            resolve(read.result && read.result.data);
           };
         });
       });
