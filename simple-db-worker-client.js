@@ -2,6 +2,7 @@
 
 class SDBWorkerClient {
   constructor(url, dbName, onError) {
+    this._dbName = dbName;
     this.requestId = 0;
     this.requests = new Map();
     this.worker = new Worker(url);
@@ -43,6 +44,10 @@ class SDBWorkerClient {
 
   get(key) {
     return this.query({operation: 'get', key: key});
+  }
+
+  init() {
+    return this.query({operation: 'init', dbName: this._dbName});
   }
 
   query(data) {
